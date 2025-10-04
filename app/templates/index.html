@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WOLManager - Network Host Discovery & WOL</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .theme-white { --bg-primary: #ffffff; --bg-secondary: #f8fafc; --text-primary: #1e293b; --text-secondary: #64748b; --accent: #3b82f6; --border: #e2e8f0; }
+        .theme-gray { --bg-primary: #f1f5f9; --bg-secondary: #e2e8f0; --text-primary: #0f172a; --text-secondary: #475569; --accent: #6366f1; --border: #cbd5e1; }
+        .theme-dark { --bg-primary: #1e293b; --bg-secondary: #334155; --text-primary: #f1f5f9; --text-secondary: #cbd5e1; --accent: #60a5fa; --border: #475569; }
+        .theme-blue { --bg-primary: #eff6ff; --bg-secondary: #dbeafe; --text-primary: #1e40af; --text-secondary: #3730a3; --accent: #2563eb; --border: #93c5fd; }
+        
+        body { background-color: var(--bg-primary); color: var(--text-primary); transition: all 0.3s ease; }
+        .card { background-color: var(--bg-secondary); border: 1px solid var(--border); }
+        .text-primary { color: var(--text-primary); }
+        .text-secondary { color: var(--text-secondary); }
+        .accent { color: var(--accent); }
+        .border-color { border-color: var(--border); }
+    </style>
+</head>
+<body class="theme-white">
+    <div id="app" class="min-h-screen">
+        <!-- Header -->
+        <header class="bg-white shadow-sm border-b border-gray-200">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between items-center py-4">
+                    <div class="flex items-center">
+                        <h1 class="text-2xl font-bold text-gray-900">
+                            <i class="fas fa-network-wired mr-2 text-blue-600"></i>
+                            WOLManager
+                        </h1>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <!-- Theme Selector -->
+                        <select id="theme-selector" class="px-3 py-2 border border-gray-300 rounded-md text-sm">
+                            <option value="white">White</option>
+                            <option value="gray">Gray</option>
+                            <option value="dark">Dark</option>
+                            <option value="blue">Blue</option>
+                        </select>
+                        <!-- Status Indicator -->
+                        <div id="status-indicator" class="flex items-center">
+                            <div class="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                            <span class="text-sm text-gray-600">Online</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- Dashboard Stats -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div class="card rounded-lg p-6">
+                    <div class="flex items-center">
+                        <div class="p-2 bg-blue-100 rounded-lg">
+                            <i class="fas fa-desktop text-blue-600"></i>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-600">Total Hosts</p>
+                            <p id="total-hosts" class="text-2xl font-semibold text-gray-900">0</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card rounded-lg p-6">
+                    <div class="flex items-center">
+                        <div class="p-2 bg-green-100 rounded-lg">
+                            <i class="fas fa-power-off text-green-600"></i>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-600">WOL Enabled</p>
+                            <p id="wol-enabled" class="text-2xl font-semibold text-gray-900">0</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card rounded-lg p-6">
+                    <div class="flex items-center">
+                        <div class="p-2 bg-yellow-100 rounded-lg">
+                            <i class="fas fa-search text-yellow-600"></i>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-600">Online</p>
+                            <p id="online-hosts" class="text-2xl font-semibold text-gray-900">0</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card rounded-lg p-6">
+                    <div class="flex items-center">
+                        <div class="p-2 bg-purple-100 rounded-lg">
+                            <i class="fas fa-clock text-purple-600"></i>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-600">Last Scan</p>
+                            <p id="last-scan" class="text-sm font-semibold text-gray-900">Never</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hosts Table -->
+            <div class="card rounded-lg p-6 mb-8">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold text-gray-900">Network Hosts</h3>
+                    <div class="flex space-x-2">
+                        <input type="text" id="search-hosts" placeholder="Search hosts..." 
+                               class="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <button id="add-host" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors">
+                            <i class="fas fa-plus mr-2"></i>Add Host
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">IP Address</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hostname</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">MAC Address</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vendor</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">OS/Device</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">WOL</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="hosts-table-body" class="bg-white divide-y divide-gray-200">
+                            <!-- Hosts will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Charts -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                <div class="card rounded-lg p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Hosts by Discovery Method</h3>
+                    <div class="relative h-64">
+                        <canvas id="discovery-chart"></canvas>
+                    </div>
+                </div>
+                
+                <div class="card rounded-lg p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Hosts by Status</h3>
+                    <div class="relative h-64">
+                        <canvas id="status-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Controls -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                <!-- Discovery Controls -->
+                <div class="card rounded-lg p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Discovery Controls</h3>
+                    <div class="space-y-3">
+                        <button id="start-discovery" class="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors">
+                            <i class="fas fa-play mr-2"></i>Start Discovery
+                        </button>
+                        <button id="stop-discovery" class="w-full bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors">
+                            <i class="fas fa-stop mr-2"></i>Stop Discovery
+                        </button>
+                        <button id="force-scan" class="w-full bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors">
+                            <i class="fas fa-sync mr-2"></i>Force Scan Now
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="card rounded-lg p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
+                    <div class="space-y-3">
+                        <button id="refresh-hosts" class="w-full bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 transition-colors">
+                            <i class="fas fa-refresh mr-2"></i>Refresh Hosts
+                        </button>
+                        <button id="view-wol-hosts" class="w-full bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors">
+                            <i class="fas fa-power-off mr-2"></i>View WOL Hosts
+                        </button>
+                        <button id="export-hosts" class="w-full bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 transition-colors">
+                            <i class="fas fa-download mr-2"></i>Export Hosts
+                        </button>
+                        <button id="view-logs" class="w-full bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition-colors">
+                            <i class="fas fa-list mr-2"></i>View Logs
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <!-- WOL Hosts Modal -->
+    <div id="wol-hosts-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[80vh] overflow-hidden">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold text-gray-900">Wake-on-LAN Registered Hosts</h3>
+                    <button id="close-wol-modal" class="text-gray-400 hover:text-gray-600">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                
+                <div class="overflow-y-auto max-h-[60vh]">
+                    <div id="wol-hosts-list" class="space-y-4">
+                        <!-- WOL hosts will be populated here -->
+                    </div>
+                    
+                    <div id="wol-hosts-empty" class="text-center py-8 text-gray-500 hidden">
+                        <i class="fas fa-power-off text-4xl mb-4"></i>
+                        <p>No hosts registered for Wake-on-LAN broadcasts</p>
+                        <p class="text-sm mt-2">Use the toggle buttons in the host table to register hosts for WOL</p>
+                    </div>
+                </div>
+                
+                <div class="flex justify-end space-x-2 mt-4 pt-4 border-t">
+                    <button id="close-wol-modal-btn" class="px-4 py-2 text-gray-600 hover:text-gray-800">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Host Modal -->
+    <div id="add-host-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-lg p-6 w-full max-w-md">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Add New Host</h3>
+                <form id="add-host-form">
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">IP Address</label>
+                            <input type="text" name="ip_address" required 
+                                   class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">MAC Address</label>
+                            <input type="text" name="mac_address" 
+                                   class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Hostname</label>
+                            <input type="text" name="hostname" 
+                                   class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Device Type</label>
+                            <input type="text" name="device_type" 
+                                   class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div class="flex items-center">
+                            <input type="checkbox" name="wol_enabled" checked 
+                                   class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                            <label class="ml-2 block text-sm text-gray-700">Enable Wake-on-LAN</label>
+                        </div>
+                    </div>
+                    <div class="flex justify-end space-x-3 mt-6">
+                        <button type="button" id="cancel-add-host" 
+                                class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
+                            Cancel
+                        </button>
+                        <button type="submit" 
+                                class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                            Add Host
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
