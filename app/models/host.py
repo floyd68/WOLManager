@@ -37,7 +37,7 @@ class Host(BaseModel):
     discovery_method: Optional[DiscoveryMethod] = Field(None, description="Method used for discovery")
     status: HostStatus = Field(HostStatus.UNKNOWN, description="Current status")
     last_seen: Optional[datetime] = Field(None, description="Last time the host was seen")
-    wol_enabled: bool = Field(True, description="Whether WOL is enabled for this host")
+    wol_enabled: bool = Field(False, description="Whether WOL is enabled for this host")
     notes: Optional[str] = Field(None, description="Additional notes")
     inferred_os: Optional[str] = Field(None, description="Inferred operating system")
     inferred_device_type: Optional[str] = Field(None, description="Inferred device type")

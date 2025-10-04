@@ -21,6 +21,10 @@ class BaseDiscoveryMethod(ABC):
     
     def _create_host(self, ip_address: str, **kwargs) -> Host:
         """Create a Host object with the discovery method set"""
+        # Ensure discovered hosts have WOL disabled by default
+        if 'wol_enabled' not in kwargs:
+            kwargs['wol_enabled'] = False
+            
         return Host(
             ip_address=ip_address,
             discovery_method=self.method,
