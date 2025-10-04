@@ -12,6 +12,16 @@ from app.services.discovery_methods.base import BaseDiscoveryMethod
 
 logger = structlog.get_logger(__name__)
 
+# Import zeroconf at module level to avoid scope issues
+try:
+    from zeroconf import Zeroconf, ServiceBrowser, ServiceListener
+    ZEROCONF_AVAILABLE = True
+except ImportError:
+    ZEROCONF_AVAILABLE = False
+    Zeroconf = None
+    ServiceBrowser = None
+    ServiceListener = None
+
 
 class mDNSDiscovery(BaseDiscoveryMethod):
     """mDNS/zeroconf-based service discovery"""
@@ -25,9 +35,11 @@ class mDNSDiscovery(BaseDiscoveryMethod):
         
         logger.info("Starting mDNS discovery", network=str(network))
         
+        if not ZEROCONF_AVAILABLE:
+            logger.error("zeroconf not available - mDNS discovery disabled")
+            return hosts
+        
         try:
-            from zeroconf import Zeroconf, ServiceBrowser, ServiceListener
-            
             # Create zeroconf instance
             logger.debug("Creating Zeroconf instance")
             zeroconf = Zeroconf()
@@ -84,8 +96,6 @@ class mDNSDiscovery(BaseDiscoveryMethod):
                        hosts_skipped=hosts_skipped,
                        final_hosts=len(hosts))
             
-        except ImportError:
-            logger.error("zeroconf not available - mDNS discovery disabled")
         except Exception as e:
             logger.error("mDNS discovery failed", error=str(e))
         
@@ -112,7 +122,7 @@ class mDNSDiscovery(BaseDiscoveryMethod):
                     discovered[i]['info'] = info
                     break
         
-        class ServiceListener:
+        class MDNSServiceListener:
             def __init__(self):
                 self.services = []
             
@@ -133,7 +143,7 @@ class mDNSDiscovery(BaseDiscoveryMethod):
                         break
         
         # Create service browser
-        listener = ServiceListener()
+        listener = MDNSServiceListener()
         browser = ServiceBrowser(zeroconf, service_types, listener)
         
         # Wait for discovery

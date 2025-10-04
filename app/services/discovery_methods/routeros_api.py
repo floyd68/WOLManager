@@ -56,7 +56,10 @@ class RouterOSAPIDiscovery(BaseDiscoveryMethod):
             
             # Get DHCP leases with detailed information
             logger.debug("Requesting DHCP leases from RouterOS API")
-            dhcp_leases = api('/ip/dhcp-server/lease/print')
+            dhcp_leases_generator = api('/ip/dhcp-server/lease/print')
+            
+            # Convert generator to list to enable len() and multiple iterations
+            dhcp_leases = list(dhcp_leases_generator)
             
             logger.info("Retrieved DHCP leases from RouterOS API", 
                       total_leases=len(dhcp_leases))
@@ -168,7 +171,16 @@ class RouterOSAPIDiscovery(BaseDiscoveryMethod):
                         continue
             
             # Get ARP table with additional information
-            arp_table = api('/ip/arp/print')
+            logger.debug("Requesting ARP table from RouterOS API")
+            arp_table_generator = api('/ip/arp/print')
+            
+            # Convert generator to list
+            arp_table = list(arp_table_generator)
+            
+            logger.info("Retrieved ARP table from RouterOS API", 
+                      total_entries=len(arp_table))
+            
+            arp_hosts_added = 0
             for entry in arp_table:
                 if 'address' in entry and 'mac-address' in entry:
                     ip = entry['address']
@@ -219,12 +231,26 @@ class RouterOSAPIDiscovery(BaseDiscoveryMethod):
                                     status=host_status
                                 )
                                 hosts.append(host)
+                                arp_hosts_added += 1
                     except ValueError:
                         continue
             
+            logger.info("ARP table processing completed", 
+                      total_entries=len(arp_table),
+                      hosts_added=arp_hosts_added)
+            
             # Get DHCP server information
             try:
-                dhcp_servers = api('/ip/dhcp-server/print')
+                logger.debug("Requesting DHCP server information from RouterOS API")
+                dhcp_servers_generator = api('/ip/dhcp-server/print')
+                
+                # Convert generator to list
+                dhcp_servers = list(dhcp_servers_generator)
+                
+                logger.info("Retrieved DHCP server information from RouterOS API", 
+                          total_servers=len(dhcp_servers))
+                
+                dhcp_server_hosts_added = 0
                 for server in dhcp_servers:
                     server_interface = server.get('interface', '')
                     server_address = server.get('address', '')
@@ -244,13 +270,22 @@ class RouterOSAPIDiscovery(BaseDiscoveryMethod):
                                     os_info=f"Interface: {server_interface}; Authoritative: {server_authoritative}; Disabled: {server_disabled}"
                                 )
                                 hosts.append(host)
+                                dhcp_server_hosts_added += 1
                         except ValueError:
                             continue
+                        
+                logger.info("DHCP server processing completed", 
+                          total_servers=len(dhcp_servers),
+                          hosts_added=dhcp_server_hosts_added)
+                        
             except Exception as e:
                 logger.debug("Failed to get DHCP server info", error=str(e))
             
             api.close()
-            logger.info("RouterOS API discovery completed", hosts_found=len(hosts))
+            logger.info("RouterOS API discovery completed", 
+                      total_hosts_found=len(hosts),
+                      dhcp_hosts=len([h for h in hosts if h.device_type and 'dhcp' in h.device_type]),
+                      arp_hosts=len([h for h in hosts if h.device_type and 'arp' in h.device_type]))
             
         except ImportError:
             logger.error("librouteros not available - RouterOS API discovery disabled")
