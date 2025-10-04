@@ -21,77 +21,131 @@ class WOLManagerApp {
     
     setupEventListeners() {
         // Theme selector
-        document.getElementById('theme-selector').addEventListener('change', (e) => {
-            this.changeTheme(e.target.value);
-        });
+        const themeSelector = document.getElementById('theme-selector');
+        if (themeSelector) {
+            themeSelector.addEventListener('change', (e) => {
+                this.changeTheme(e.target.value);
+            });
+        }
         
         // Discovery toggle
-        document.getElementById('discovery-toggle').addEventListener('click', () => {
-            this.toggleDiscovery();
-        });
+        const discoveryToggle = document.getElementById('discovery-toggle');
+        if (discoveryToggle) {
+            discoveryToggle.addEventListener('click', () => {
+                this.toggleDiscovery();
+            });
+        }
         
-        document.getElementById('force-scan').addEventListener('click', () => {
-            this.forceScan();
-        });
+        const forceScan = document.getElementById('force-scan');
+        if (forceScan) {
+            forceScan.addEventListener('click', () => {
+                this.forceScan();
+            });
+        }
         
         // Quick actions
-        document.getElementById('refresh-hosts').addEventListener('click', () => {
-            this.refreshHosts();
-        });
+        const refreshHosts = document.getElementById('refresh-hosts');
+        if (refreshHosts) {
+            refreshHosts.addEventListener('click', () => {
+                this.refreshHosts();
+            });
+        }
         
-        document.getElementById('export-hosts').addEventListener('click', () => {
-            this.exportHosts();
-        });
+        const exportHosts = document.getElementById('export-hosts');
+        if (exportHosts) {
+            exportHosts.addEventListener('click', () => {
+                this.exportHosts();
+            });
+        }
         
-        document.getElementById('view-logs').addEventListener('click', () => {
-            this.viewLogs();
-        });
+        const viewLogs = document.getElementById('view-logs');
+        if (viewLogs) {
+            viewLogs.addEventListener('click', () => {
+                this.viewLogs();
+            });
+        }
         
         // Add host
-        document.getElementById('add-host').addEventListener('click', () => {
-            this.showAddHostModal();
-        });
+        const addHost = document.getElementById('add-host');
+        if (addHost) {
+            addHost.addEventListener('click', () => {
+                this.showAddHostModal();
+            });
+        }
         
-        document.getElementById('cancel-add-host').addEventListener('click', () => {
-            this.hideAddHostModal();
-        });
+        const cancelAddHost = document.getElementById('cancel-add-host');
+        if (cancelAddHost) {
+            cancelAddHost.addEventListener('click', () => {
+                this.hideAddHostModal();
+            });
+        }
         
-        document.getElementById('add-host-form').addEventListener('submit', (e) => {
-            e.preventDefault();
-            this.addHost();
-        });
+        const addHostForm = document.getElementById('add-host-form');
+        if (addHostForm) {
+            addHostForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                this.addHost();
+            });
+        }
         
         // Search
-        document.getElementById('search-hosts').addEventListener('input', (e) => {
-            this.filterHosts(e.target.value);
-        });
+        const searchHosts = document.getElementById('search-hosts');
+        if (searchHosts) {
+            searchHosts.addEventListener('input', (e) => {
+                this.filterHosts(e.target.value);
+            });
+        }
         
         // Compact view toggle
-        document.getElementById('toggle-view').addEventListener('click', () => {
-            this.toggleCompactView();
-        });
+        const toggleView = document.getElementById('toggle-view');
+        if (toggleView) {
+            toggleView.addEventListener('click', () => {
+                this.toggleCompactView();
+            });
+        }
         
         // Host details modal
-        document.getElementById('close-details-modal').addEventListener('click', () => {
-            this.hideHostDetailsModal();
-        });
+        const closeDetailsModal = document.getElementById('close-details-modal');
+        if (closeDetailsModal) {
+            closeDetailsModal.addEventListener('click', () => {
+                this.hideHostDetailsModal();
+            });
+        }
         
-        document.getElementById('close-details-modal-btn').addEventListener('click', () => {
-            this.hideHostDetailsModal();
-        });
+        const closeDetailsModalBtn = document.getElementById('close-details-modal-btn');
+        if (closeDetailsModalBtn) {
+            closeDetailsModalBtn.addEventListener('click', () => {
+                this.hideHostDetailsModal();
+            });
+        }
         
         // WOL Hosts Modal
-        document.getElementById('view-wol-hosts').addEventListener('click', () => {
-            this.showWOLHostsModal();
-        });
+        const viewWolHosts = document.getElementById('view-wol-hosts');
+        if (viewWolHosts) {
+            viewWolHosts.addEventListener('click', () => {
+                this.showWOLHostsModal();
+            });
+        }
         
-        document.getElementById('close-wol-modal').addEventListener('click', () => {
-            document.getElementById('wol-hosts-modal').classList.add('hidden');
-        });
+        const closeWolModal = document.getElementById('close-wol-modal');
+        if (closeWolModal) {
+            closeWolModal.addEventListener('click', () => {
+                const wolHostsModal = document.getElementById('wol-hosts-modal');
+                if (wolHostsModal) {
+                    wolHostsModal.classList.add('hidden');
+                }
+            });
+        }
         
-        document.getElementById('close-wol-modal-btn').addEventListener('click', () => {
-            document.getElementById('wol-hosts-modal').classList.add('hidden');
-        });
+        const closeWolModalBtn = document.getElementById('close-wol-modal-btn');
+        if (closeWolModalBtn) {
+            closeWolModalBtn.addEventListener('click', () => {
+                const wolHostsModal = document.getElementById('wol-hosts-modal');
+                if (wolHostsModal) {
+                    wolHostsModal.classList.add('hidden');
+                }
+            });
+        }
     }
     
     async loadInitialData() {
