@@ -68,8 +68,13 @@ class DiscoveryService:
         while self.running:
             try:
                 await self.run_discovery()
-                await redis_client.redis.set("discovery:status", "running")
-                await redis_client.redis.set("discovery:last_run", datetime.now().isoformat())
+                
+                # Update Redis status if connected
+                if redis_client.redis:
+                    await redis_client.redis.set("discovery:status", "running")
+                    await redis_client.redis.set("discovery:last_run", datetime.now().isoformat())
+                else:
+                    logger.warning("Redis not connected - skipping status update")
                 
                 # Wait for next interval
                 await asyncio.sleep(settings.DISCOVERY_INTERVAL)
@@ -78,7 +83,8 @@ class DiscoveryService:
                 break
             except Exception as e:
                 logger.error("Error in discovery loop", error=str(e))
-                await redis_client.redis.set("discovery:status", f"error: {str(e)}")
+                if redis_client.redis:
+                    await redis_client.redis.set("discovery:status", f"error: {str(e)}")
                 await asyncio.sleep(60)  # Wait 1 minute before retry
     
     async def run_discovery(self) -> List[Host]:
@@ -160,6 +166,11 @@ class DiscoveryService:
     async def _store_host(self, host: Host):
         """Store host information in Redis with quality-aware merge"""
         try:
+            # Check if Redis is connected
+            if not redis_client.redis:
+                logger.warning("Redis not connected - skipping host storage", ip=host.ip_address)
+                return
+                
             host_data = host.dict()
             host_data["last_seen"] = datetime.now().isoformat()
             
