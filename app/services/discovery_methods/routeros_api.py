@@ -356,7 +356,7 @@ class RouterOSAPIDiscovery(BaseDiscoveryMethod):
             elif '10.0' in class_id_lower:
                 return "Windows 10/11/Server 2016+"
             else:
-                return "Windows (Unknown Version)"
+                return "Windows"
         
         # Android detection
         if 'android' in class_id_lower:
@@ -369,7 +369,7 @@ class RouterOSAPIDiscovery(BaseDiscoveryMethod):
             elif 'dhcp-10' in class_id_lower:
                 return "Android 10"
             else:
-                return "Android (Unknown Version)"
+                return "Android"
         
         # iOS detection
         if 'iphone' in class_id_lower or 'ipad' in class_id_lower:

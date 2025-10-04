@@ -87,6 +87,22 @@ class WOLManagerApp {
                 this.addHost();
             });
         }
+
+        // Edit host
+        const cancelEditHost = document.getElementById('cancel-edit-host');
+        if (cancelEditHost) {
+            cancelEditHost.addEventListener('click', () => {
+                this.hideEditHostModal();
+            });
+        }
+
+        const editHostForm = document.getElementById('edit-host-form');
+        if (editHostForm) {
+            editHostForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                this.updateHost();
+            });
+        }
         
         // Search
         const searchHosts = document.getElementById('search-hosts');
@@ -698,6 +714,79 @@ class WOLManagerApp {
     hideAddHostModal() {
         document.getElementById('add-host-modal').classList.add('hidden');
         document.getElementById('add-host-form').reset();
+    }
+
+    async editHost(ipAddress) {
+        try {
+            // Get host data
+            const response = await fetch(`${this.apiBase}/hosts/${ipAddress}`);
+            if (!response.ok) {
+                throw new Error('Failed to fetch host data');
+            }
+            
+            const host = await response.json();
+            
+            // Populate edit form
+            const form = document.getElementById('edit-host-form');
+            form.elements['ip_address'].value = host.ip_address;
+            form.elements['mac_address'].value = host.mac_address || '';
+            form.elements['hostname'].value = host.hostname || '';
+            form.elements['device_type'].value = host.device_type || '';
+            form.elements['vendor'].value = host.vendor || '';
+            form.elements['notes'].value = host.notes || '';
+            form.elements['wol_enabled'].checked = host.wol_enabled || false;
+            
+            // Show modal
+            this.showEditHostModal();
+        } catch (error) {
+            console.error('Failed to edit host:', error);
+            this.showNotification('Failed to load host data', 'error');
+        }
+    }
+
+    async updateHost() {
+        try {
+            const form = document.getElementById('edit-host-form');
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
+            data.wol_enabled = formData.has('wol_enabled');
+            
+            // Remove empty strings and convert to null
+            Object.keys(data).forEach(key => {
+                if (data[key] === '') {
+                    data[key] = null;
+                }
+            });
+            
+            const ipAddress = data.ip_address;
+            delete data.ip_address; // Remove IP from update data
+            
+            const response = await fetch(`${this.apiBase}/hosts/${ipAddress}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            
+            if (!response.ok) {
+                throw new Error('Failed to update host');
+            }
+            
+            this.showNotification('Host updated successfully', 'success');
+            this.hideEditHostModal();
+            this.loadHosts();
+        } catch (error) {
+            console.error('Failed to update host:', error);
+            this.showNotification('Failed to update host', 'error');
+        }
+    }
+
+    showEditHostModal() {
+        document.getElementById('edit-host-modal').classList.remove('hidden');
+    }
+
+    hideEditHostModal() {
+        document.getElementById('edit-host-modal').classList.add('hidden');
+        document.getElementById('edit-host-form').reset();
     }
     
     refreshHosts() {
