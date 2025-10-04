@@ -8,6 +8,7 @@ class WOLManagerApp {
         this.hosts = [];
         this.discoveryChart = null;
         this.statusChart = null;
+        this.compactView = false;
         
         this.init();
     }
@@ -67,6 +68,20 @@ class WOLManagerApp {
         // Search
         document.getElementById('search-hosts').addEventListener('input', (e) => {
             this.filterHosts(e.target.value);
+        });
+        
+        // Compact view toggle
+        document.getElementById('toggle-view').addEventListener('click', () => {
+            this.toggleCompactView();
+        });
+        
+        // Host details modal
+        document.getElementById('close-details-modal').addEventListener('click', () => {
+            this.hideHostDetailsModal();
+        });
+        
+        document.getElementById('close-details-modal-btn').addEventListener('click', () => {
+            this.hideHostDetailsModal();
         });
         
         // WOL Hosts Modal
@@ -283,14 +298,14 @@ class WOLManagerApp {
         }
         
         row.innerHTML = `
-            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${host.ip_address}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${host.hostname || 'Unknown'}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${host.mac_address || 'Unknown'}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${vendor}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${osDeviceInfo}</td>
-            <td class="px-6 py-4 whitespace-nowrap">${statusBadge}</td>
-            <td class="px-6 py-4 whitespace-nowrap">${wolBadge}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+            <td class="px-3 py-4 text-sm font-medium text-gray-900 truncate" title="${host.ip_address}">${host.ip_address}</td>
+            <td class="px-3 py-4 text-sm text-gray-500 truncate" title="${host.hostname || 'Unknown'}">${host.hostname || 'Unknown'}</td>
+            <td class="px-3 py-4 text-sm text-gray-500 truncate" title="${host.mac_address || 'Unknown'}">${host.mac_address || 'Unknown'}</td>
+            <td class="px-3 py-4 text-sm text-gray-500 truncate hidden lg:table-cell" title="${vendor}">${vendor}</td>
+            <td class="px-3 py-4 text-sm text-gray-500 truncate hidden md:table-cell" title="${osDeviceInfo}">${osDeviceInfo}</td>
+            <td class="px-3 py-4">${statusBadge}</td>
+            <td class="px-3 py-4 hidden sm:table-cell">${wolBadge}</td>
+            <td class="px-3 py-4 text-sm font-medium">
                 <div class="flex space-x-2">
                     ${host.mac_address ? 
                         `<button onclick="app.toggleWOLRegistration('${host.ip_address}', false)" 
@@ -302,6 +317,9 @@ class WOLManagerApp {
                             <i class="fas fa-toggle-off"></i>
                         </button>`
                     }
+                    <button onclick="app.showHostDetails('${host.ip_address}')" class="text-blue-600 hover:text-blue-900" title="View Details">
+                        <i class="fas fa-info-circle"></i>
+                    </button>
                     <button onclick="app.editHost('${host.ip_address}')" class="text-indigo-600 hover:text-indigo-900" title="Edit Host">
                         <i class="fas fa-edit"></i>
                     </button>
@@ -619,6 +637,182 @@ class WOLManagerApp {
         a.download = 'wolmanager-hosts.csv';
         a.click();
         URL.revokeObjectURL(url);
+    }
+    
+    toggleCompactView() {
+        this.compactView = !this.compactView;
+        const toggleBtn = document.getElementById('toggle-view');
+        const table = document.querySelector('#unregistered-hosts-table-body').closest('table');
+        
+        if (this.compactView) {
+            // Compact view - hide less important columns
+            table.classList.add('table-compact');
+            toggleBtn.innerHTML = '<i class="fas fa-compress-arrows-alt mr-2"></i>Full';
+            toggleBtn.title = 'Switch to full view';
+            
+            // Hide columns on smaller screens
+            const vendorCols = table.querySelectorAll('th:nth-child(4), td:nth-child(4)');
+            const osCols = table.querySelectorAll('th:nth-child(5), td:nth-child(5)');
+            const wolCols = table.querySelectorAll('th:nth-child(7), td:nth-child(7)');
+            
+            vendorCols.forEach(col => col.classList.add('hidden'));
+            osCols.forEach(col => col.classList.add('hidden', 'lg:table-cell'));
+            wolCols.forEach(col => col.classList.add('hidden', 'sm:table-cell'));
+        } else {
+            // Full view - show all columns
+            table.classList.remove('table-compact');
+            toggleBtn.innerHTML = '<i class="fas fa-expand-arrows-alt mr-2"></i>Compact';
+            toggleBtn.title = 'Switch to compact view';
+            
+            // Show all columns with responsive classes
+            const vendorCols = table.querySelectorAll('th:nth-child(4), td:nth-child(4)');
+            const osCols = table.querySelectorAll('th:nth-child(5), td:nth-child(5)');
+            const wolCols = table.querySelectorAll('th:nth-child(7), td:nth-child(7)');
+            
+            vendorCols.forEach(col => {
+                col.classList.remove('hidden');
+                col.classList.add('hidden', 'lg:table-cell');
+            });
+            osCols.forEach(col => {
+                col.classList.remove('hidden');
+                col.classList.add('hidden', 'md:table-cell');
+            });
+            wolCols.forEach(col => {
+                col.classList.remove('hidden');
+                col.classList.add('hidden', 'sm:table-cell');
+            });
+        }
+    }
+    
+    async showHostDetails(ipAddress) {
+        try {
+            const host = this.hosts.find(h => h.ip_address === ipAddress);
+            if (!host) {
+                this.showNotification('Host not found', 'error');
+                return;
+            }
+            
+            this.populateHostDetailsModal(host);
+            document.getElementById('host-details-modal').classList.remove('hidden');
+        } catch (error) {
+            console.error('Failed to show host details:', error);
+            this.showNotification('Failed to load host details', 'error');
+        }
+    }
+    
+    populateHostDetailsModal(host) {
+        const content = document.getElementById('host-details-content');
+        
+        // Format OS/Device information
+        let osDeviceInfo = '';
+        if (host.inferred_os && host.inferred_device_type) {
+            osDeviceInfo = `${host.inferred_os}`;
+            if (host.inferred_device_type !== 'dhcp_client' && host.inferred_device_type !== 'unknown_device') {
+                osDeviceInfo += ` (${host.inferred_device_type.replace('_', ' ')})`;
+            }
+            if (host.inference_confidence && host.inference_confidence > 50) {
+                osDeviceInfo += ` [${host.inference_confidence}% confidence]`;
+            }
+        } else if (host.device_type) {
+            osDeviceInfo = host.device_type.replace('_', ' ');
+        } else {
+            osDeviceInfo = 'Unknown';
+        }
+        
+        // Format discovery info
+        const discoveryMethod = host.discovery_method?.replace('_', ' ').toUpperCase() || 'Unknown';
+        const lastSeen = host.last_seen ? new Date(host.last_seen).toLocaleString() : 'Never';
+        
+        content.innerHTML = `
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Basic Information -->
+                <div class="space-y-4">
+                    <h4 class="text-md font-semibold text-gray-900 border-b pb-2">Basic Information</h4>
+                    
+                    <div class="space-y-3">
+                        <div>
+                            <label class="text-sm font-medium text-gray-500">IP Address</label>
+                            <p class="text-sm text-gray-900 font-mono">${host.ip_address}</p>
+                        </div>
+                        
+                        <div>
+                            <label class="text-sm font-medium text-gray-500">Hostname</label>
+                            <p class="text-sm text-gray-900">${host.hostname || 'Not available'}</p>
+                        </div>
+                        
+                        <div>
+                            <label class="text-sm font-medium text-gray-500">MAC Address</label>
+                            <p class="text-sm text-gray-900 font-mono">${host.mac_address || 'Not available'}</p>
+                        </div>
+                        
+                        <div>
+                            <label class="text-sm font-medium text-gray-500">Vendor</label>
+                            <p class="text-sm text-gray-900">${host.vendor || 'Unknown'}</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Technical Details -->
+                <div class="space-y-4">
+                    <h4 class="text-md font-semibold text-gray-900 border-b pb-2">Technical Details</h4>
+                    
+                    <div class="space-y-3">
+                        <div>
+                            <label class="text-sm font-medium text-gray-500">Status</label>
+                            <p class="text-sm">${this.getStatusBadge(host.status)}</p>
+                        </div>
+                        
+                        <div>
+                            <label class="text-sm font-medium text-gray-500">Wake-on-LAN</label>
+                            <p class="text-sm">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${host.wol_enabled ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}">
+                                    ${host.wol_enabled ? 'Enabled' : 'Disabled'}
+                                </span>
+                            </p>
+                        </div>
+                        
+                        <div>
+                            <label class="text-sm font-medium text-gray-500">OS/Device</label>
+                            <p class="text-sm text-gray-900">${osDeviceInfo}</p>
+                        </div>
+                        
+                        <div>
+                            <label class="text-sm font-medium text-gray-500">Discovery Method</label>
+                            <p class="text-sm text-gray-900">${discoveryMethod}</p>
+                        </div>
+                        
+                        <div>
+                            <label class="text-sm font-medium text-gray-500">Last Seen</label>
+                            <p class="text-sm text-gray-900">${lastSeen}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            ${host.notes ? `
+                <div class="mt-6">
+                    <h4 class="text-md font-semibold text-gray-900 border-b pb-2">Notes</h4>
+                    <p class="text-sm text-gray-900 mt-2">${host.notes}</p>
+                </div>
+            ` : ''}
+            
+            ${host.os_info ? `
+                <div class="mt-6">
+                    <h4 class="text-md font-semibold text-gray-900 border-b pb-2">OS Information</h4>
+                    <p class="text-sm text-gray-900 mt-2 font-mono bg-gray-50 p-3 rounded">${host.os_info}</p>
+                </div>
+            ` : ''}
+        `;
+        
+        // Update edit button
+        document.getElementById('edit-from-details').onclick = () => {
+            this.hideHostDetailsModal();
+            this.editHost(host.ip_address);
+        };
+    }
+    
+    hideHostDetailsModal() {
+        document.getElementById('host-details-modal').classList.add('hidden');
     }
     
     hostsToCSV(hosts) {

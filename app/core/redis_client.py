@@ -224,13 +224,46 @@ class RedisClient:
                 ):
                     merged_data['last_seen'] = new_host_data['last_seen']
                 
-                # Update inferred fields if they're missing in existing data
-                if not existing_host.get('inferred_os') and new_host_obj.inferred_os:
+                # Merge MAC address (prefer non-null)
+                if not merged_data.get('mac_address') and new_host_obj.mac_address:
+                    merged_data['mac_address'] = new_host_obj.mac_address
+                    logger.debug("Updated MAC address", ip=ip_address, new_mac=new_host_obj.mac_address)
+                
+                # Merge hostname (prefer non-empty, longer names)
+                if not merged_data.get('hostname') or (new_host_obj.hostname and len(new_host_obj.hostname) > len(merged_data.get('hostname') or '')):
+                    merged_data['hostname'] = new_host_obj.hostname
+                    logger.debug("Updated hostname", ip=ip_address, new_hostname=new_host_obj.hostname)
+                
+                # Merge vendor (prefer non-null)
+                if not merged_data.get('vendor') and new_host_obj.vendor:
+                    merged_data['vendor'] = new_host_obj.vendor
+                    logger.debug("Updated vendor", ip=ip_address, new_vendor=new_host_obj.vendor)
+                
+                # Merge device type (prefer more specific)
+                if not merged_data.get('device_type') or self._is_more_specific_device_type(new_host_obj.device_type, merged_data.get('device_type')):
+                    merged_data['device_type'] = new_host_obj.device_type
+                    logger.debug("Updated device type", ip=ip_address, new_device_type=new_host_obj.device_type)
+                
+                # Merge OS info (prefer longer, more detailed)
+                if not merged_data.get('os_info') or (new_host_obj.os_info and len(new_host_obj.os_info) > len(merged_data.get('os_info') or '')):
+                    merged_data['os_info'] = new_host_obj.os_info
+                    logger.debug("Updated OS info", ip=ip_address, new_os_info=new_host_obj.os_info)
+                
+                # Merge notes (prefer non-null)
+                if not merged_data.get('notes') and new_host_obj.notes:
+                    merged_data['notes'] = new_host_obj.notes
+                    logger.debug("Updated notes", ip=ip_address, new_notes=new_host_obj.notes)
+                
+                # Merge inferred fields if they're missing in existing data
+                if not merged_data.get('inferred_os') and new_host_obj.inferred_os:
                     merged_data['inferred_os'] = new_host_obj.inferred_os
-                if not existing_host.get('inferred_device_type') and new_host_obj.inferred_device_type:
+                    logger.debug("Updated inferred OS", ip=ip_address, new_inferred_os=new_host_obj.inferred_os)
+                if not merged_data.get('inferred_device_type') and new_host_obj.inferred_device_type:
                     merged_data['inferred_device_type'] = new_host_obj.inferred_device_type
-                if not existing_host.get('inference_confidence') and new_host_obj.inference_confidence:
+                    logger.debug("Updated inferred device type", ip=ip_address, new_inferred_device_type=new_host_obj.inferred_device_type)
+                if not merged_data.get('inference_confidence') and new_host_obj.inference_confidence:
                     merged_data['inference_confidence'] = new_host_obj.inference_confidence
+                    logger.debug("Updated inference confidence", ip=ip_address, new_confidence=new_host_obj.inference_confidence)
                 
                 # Only update if there were changes
                 if merged_data != existing_host:
@@ -255,6 +288,38 @@ class RedisClient:
         current_priority = status_priority.get(current_status, 0)
         
         return new_priority > current_priority
+    
+    def _is_more_specific_device_type(self, new_type, current_type) -> bool:
+        """Check if new device type is more specific than current"""
+        if not new_type:
+            return False
+        if not current_type:
+            return True
+        
+        # Device type specificity hierarchy (more specific = higher score)
+        specificity_scores = {
+            'dhcp_lease': 10,
+            'arp_entry': 8,
+            'dhcp_server': 7,
+            'router': 6,
+            'switch': 5,
+            'printer': 4,
+            'computer': 3,
+            'mobile': 2,
+            'unknown_device': 1
+        }
+        
+        new_score = specificity_scores.get(new_type, 0)
+        current_score = specificity_scores.get(current_type, 0)
+        
+        # Also prefer types with more descriptive names (containing underscores)
+        if new_score == current_score:
+            new_has_underscore = '_' in new_type
+            current_has_underscore = '_' in current_type
+            if new_has_underscore and not current_has_underscore:
+                return True
+        
+        return new_score > current_score
     
     async def get_discovery_status(self) -> Dict[str, Any]:
         """Get discovery service status"""
