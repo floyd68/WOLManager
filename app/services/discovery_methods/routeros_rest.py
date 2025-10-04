@@ -33,23 +33,10 @@ class RouterOSRestDiscovery(BaseDiscoveryMethod):
             return hosts
         
         try:
-            async with httpx.AsyncClient() as client:
-                # Login to RouterOS REST API
-                login_data = {
-                    "name": self.username,
-                    "password": self.password
-                }
-                
-                login_response = await client.post(
-                    f"http://{self.host}/rest/user/login",
-                    json=login_data,
-                    timeout=10
-                )
-                
-                if login_response.status_code != 200:
-                    logger.error("RouterOS REST login failed", 
-                               status=login_response.status_code)
-                    return hosts
+            # Create HTTP client with basic auth for RouterOS REST API
+            auth = httpx.BasicAuth(self.username, self.password)
+            
+            async with httpx.AsyncClient(auth=auth) as client:
                 
                 # Get DHCP leases
                 dhcp_response = await client.get(
@@ -107,9 +94,6 @@ class RouterOSRestDiscovery(BaseDiscoveryMethod):
                                         hosts.append(host)
                             except ValueError:
                                 continue
-                
-                # Logout
-                await client.post(f"http://{self.host}/rest/user/logout")
                 
                 logger.info("RouterOS REST discovery completed", hosts_found=len(hosts))
                 
