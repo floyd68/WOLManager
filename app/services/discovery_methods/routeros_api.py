@@ -28,6 +28,11 @@ class RouterOSAPIDiscovery(BaseDiscoveryMethod):
         """Discover hosts using RouterOS API"""
         hosts = []
         
+        logger.info("Starting RouterOS API discovery", 
+                   routeros_host=self.host, 
+                   routeros_port=self.port,
+                   network=str(network))
+        
         if not all([self.host, self.username, self.password]):
             logger.debug("RouterOS API discovery skipped - credentials not configured")
             return hosts
@@ -35,6 +40,9 @@ class RouterOSAPIDiscovery(BaseDiscoveryMethod):
         try:
             import librouteros
             from librouteros import connect
+            
+            logger.debug("Connecting to RouterOS API", 
+                        host=self.host, port=self.port, username=self.username)
             
             # Connect to RouterOS
             api = connect(
@@ -44,13 +52,27 @@ class RouterOSAPIDiscovery(BaseDiscoveryMethod):
                 port=self.port
             )
             
+            logger.info("Successfully connected to RouterOS API")
+            
             # Get DHCP leases with detailed information
+            logger.debug("Requesting DHCP leases from RouterOS API")
             dhcp_leases = api('/ip/dhcp-server/lease/print')
+            
+            logger.info("Retrieved DHCP leases from RouterOS API", 
+                      total_leases=len(dhcp_leases))
+            
+            dhcp_hosts_added = 0
             for lease in dhcp_leases:
+                logger.debug("Processing DHCP lease", lease_data=lease)
+                
                 if 'address' in lease and 'mac-address' in lease:
                     ip = lease['address']
                     mac = lease['mac-address']
                     hostname = lease.get('host-name', '')
+                    
+                    logger.debug("DHCP lease details", 
+                               ip=ip, mac=mac, hostname=hostname,
+                               lease_fields=list(lease.keys()))
                     
                     # Check if IP is in our network range
                     try:

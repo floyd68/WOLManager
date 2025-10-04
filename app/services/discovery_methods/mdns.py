@@ -23,11 +23,13 @@ class mDNSDiscovery(BaseDiscoveryMethod):
         """Discover hosts using mDNS/zeroconf"""
         hosts = []
         
+        logger.info("Starting mDNS discovery", network=str(network))
+        
         try:
             from zeroconf import Zeroconf, ServiceBrowser, ServiceListener
-            from zeroconf._protocol import RecordUpdateListener
             
             # Create zeroconf instance
+            logger.debug("Creating Zeroconf instance")
             zeroconf = Zeroconf()
             
             # Service types to discover
@@ -42,17 +44,45 @@ class mDNSDiscovery(BaseDiscoveryMethod):
                 "_raop._tcp.local.",
             ]
             
+            logger.info("Starting mDNS service discovery", 
+                       service_types=service_types,
+                       total_types=len(service_types))
+            
             # Discover services
             discovered_services = await self._discover_services(zeroconf, service_types)
             
+            logger.info("mDNS service discovery completed", 
+                       services_found=len(discovered_services))
+            
             # Convert services to hosts
-            for service in discovered_services:
+            hosts_added = 0
+            hosts_skipped = 0
+            for i, service in enumerate(discovered_services):
+                logger.debug("Processing mDNS service", 
+                           service_index=i,
+                           service_name=service.get('name'),
+                           service_type=service.get('type'))
+                
                 host = await self._service_to_host(service, network)
                 if host:
                     hosts.append(host)
+                    hosts_added += 1
+                    logger.debug("Added host from mDNS service", 
+                               ip=host.ip_address,
+                               hostname=host.hostname,
+                               device_type=host.device_type)
+                else:
+                    hosts_skipped += 1
+                    logger.debug("Skipped mDNS service - could not convert to host", 
+                               service_name=service.get('name'),
+                               service_type=service.get('type'))
             
             zeroconf.close()
-            logger.info("mDNS discovery completed", hosts_found=len(hosts))
+            logger.info("mDNS discovery completed", 
+                       total_services=len(discovered_services),
+                       hosts_added=hosts_added,
+                       hosts_skipped=hosts_skipped,
+                       final_hosts=len(hosts))
             
         except ImportError:
             logger.error("zeroconf not available - mDNS discovery disabled")
@@ -118,10 +148,18 @@ class mDNSDiscovery(BaseDiscoveryMethod):
         """Convert mDNS service to Host object"""
         try:
             info = service['info']
+            service_name = service['name']
+            service_type = service['type']
+            
+            logger.debug("Converting mDNS service to host", 
+                       service_name=service_name,
+                       service_type=service_type,
+                       addresses_count=len(info.addresses) if info.addresses else 0)
             
             # Get IP address
             addresses = info.addresses
             if not addresses:
+                logger.debug("No addresses in mDNS service", service_name=service_name)
                 return None
             
             # Use first IPv4 address
@@ -131,16 +169,23 @@ class mDNSDiscovery(BaseDiscoveryMethod):
                     ip_obj = ipaddress.ip_address(addr)
                     if isinstance(ip_obj, ipaddress.IPv4Address) and ip_obj in network:
                         ip = str(ip_obj)
+                        logger.debug("Found IPv4 address in network range", 
+                                   ip=ip, network=str(network))
                         break
-                except ValueError:
+                    else:
+                        logger.debug("Address not in network range", 
+                                   addr=str(addr), network=str(network))
+                except ValueError as e:
+                    logger.debug("Invalid address format", addr=str(addr), error=str(e))
                     continue
             
             if not ip:
+                logger.debug("No valid IPv4 address found in mDNS service", 
+                           service_name=service_name)
                 return None
             
             # Extract hostname and device info
-            hostname = service['name'].split('.')[0]
-            service_type = service['type']
+            hostname = service_name.split('.')[0]
             
             # Determine device type based on service
             device_type = self._get_device_type(service_type)
@@ -149,9 +194,16 @@ class mDNSDiscovery(BaseDiscoveryMethod):
             properties = {}
             if info.properties:
                 properties = {k.decode(): v.decode() for k, v in info.properties.items()}
+                logger.debug("Extracted TXT properties", 
+                           properties=properties,
+                           service_name=service_name)
             
             # Extract vendor info if available
             vendor = properties.get('manufacturer') or properties.get('model')
+            
+            logger.debug("Creating host from mDNS service", 
+                       ip=ip, hostname=hostname, vendor=vendor,
+                       device_type=device_type, service_type=service_type)
             
             host = self._create_host(
                 ip_address=ip,
@@ -164,7 +216,9 @@ class mDNSDiscovery(BaseDiscoveryMethod):
             return host
             
         except Exception as e:
-            logger.debug("Failed to convert service to host", error=str(e))
+            logger.debug("Failed to convert service to host", 
+                        service_name=service.get('name', 'unknown'),
+                        error=str(e), error_type=type(e).__name__)
             return None
     
     def _get_device_type(self, service_type: str) -> str:
