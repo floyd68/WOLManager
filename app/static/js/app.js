@@ -153,6 +153,22 @@ class WOLManagerApp {
         }
     }
     
+    // Helper function to sort IP addresses numerically
+    sortHostsByIP(hosts) {
+        return hosts.sort((a, b) => {
+            const ipA = a.ip_address.split('.').map(num => parseInt(num, 10));
+            const ipB = b.ip_address.split('.').map(num => parseInt(num, 10));
+            
+            // Compare each octet
+            for (let i = 0; i < 4; i++) {
+                if (ipA[i] !== ipB[i]) {
+                    return ipA[i] - ipB[i];
+                }
+            }
+            return 0;
+        });
+    }
+    
     renderHostsTable() {
         // Clear both tables
         const registeredTbody = document.getElementById('registered-hosts-table-body');
@@ -163,9 +179,9 @@ class WOLManagerApp {
         registeredTbody.innerHTML = '';
         unregisteredTbody.innerHTML = '';
         
-        // Separate hosts by WOL status
-        const registeredHosts = this.hosts.filter(host => host.wol_enabled);
-        const unregisteredHosts = this.hosts.filter(host => !host.wol_enabled);
+        // Separate hosts by WOL status and sort by IP address
+        const registeredHosts = this.sortHostsByIP(this.hosts.filter(host => host.wol_enabled));
+        const unregisteredHosts = this.sortHostsByIP(this.hosts.filter(host => !host.wol_enabled));
         
         // Update registered hosts table
         if (registeredHosts.length > 0) {
@@ -595,7 +611,7 @@ class WOLManagerApp {
     }
     
     exportHosts() {
-        const csv = this.hostsToCSV(this.hosts);
+        const csv = this.hostsToCSV(this.sortHostsByIP(this.hosts));
         const blob = new Blob([csv], { type: 'text/csv' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -641,9 +657,9 @@ class WOLManagerApp {
         registeredTbody.innerHTML = '';
         unregisteredTbody.innerHTML = '';
         
-        // Separate filtered hosts by WOL status
-        const registeredHosts = filteredHosts.filter(host => host.wol_enabled);
-        const unregisteredHosts = filteredHosts.filter(host => !host.wol_enabled);
+        // Separate filtered hosts by WOL status and sort by IP address
+        const registeredHosts = this.sortHostsByIP(filteredHosts.filter(host => host.wol_enabled));
+        const unregisteredHosts = this.sortHostsByIP(filteredHosts.filter(host => !host.wol_enabled));
         
         // Update registered hosts table
         if (registeredHosts.length > 0) {
@@ -710,7 +726,10 @@ class WOLManagerApp {
         hostsList.classList.remove('hidden');
         emptyState.classList.add('hidden');
         
-        hostsList.innerHTML = data.hosts.map(host => `
+        // Sort WOL hosts by IP address
+        const sortedWOLHosts = this.sortHostsByIP(data.hosts);
+        
+        hostsList.innerHTML = sortedWOLHosts.map(host => `
             <div class="bg-gray-50 rounded-lg p-4 flex items-center justify-between">
                 <div class="flex-1">
                     <div class="flex items-center space-x-4">

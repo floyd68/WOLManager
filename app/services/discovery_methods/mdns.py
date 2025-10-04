@@ -103,44 +103,35 @@ class mDNSDiscovery(BaseDiscoveryMethod):
     
     async def _discover_services(self, zeroconf, service_types: List[str]) -> List[dict]:
         """Discover mDNS services"""
-        discovered = []
-        
-        def service_discovered(zeroconf, service_type, name, info):
-            discovered.append({
-                'type': service_type,
-                'name': name,
-                'info': info
-            })
-        
-        def service_removed(zeroconf, service_type, name):
-            pass
-        
-        def service_updated(zeroconf, service_type, name, info):
-            # Update existing service
-            for i, service in enumerate(discovered):
-                if service['name'] == name:
-                    discovered[i]['info'] = info
-                    break
-        
         class MDNSServiceListener:
             def __init__(self):
                 self.services = []
             
-            def add_service(self, zeroconf, service_type, name, info):
-                self.services.append({
-                    'type': service_type,
-                    'name': name,
-                    'info': info
-                })
+            def add_service(self, zeroconf, service_type, name):
+                # Get service info
+                info = zeroconf.get_service_info(service_type, name)
+                if info:
+                    self.services.append({
+                        'type': service_type,
+                        'name': name,
+                        'info': info
+                    })
+                    logger.debug("Added mDNS service", service_type=service_type, name=name)
             
             def remove_service(self, zeroconf, service_type, name):
-                pass
+                # Remove service from list
+                self.services = [s for s in self.services if not (s['type'] == service_type and s['name'] == name)]
+                logger.debug("Removed mDNS service", service_type=service_type, name=name)
             
-            def update_service(self, zeroconf, service_type, name, info):
-                for i, service in enumerate(self.services):
-                    if service['name'] == name:
-                        self.services[i]['info'] = info
-                        break
+            def update_service(self, zeroconf, service_type, name):
+                # Update service info
+                info = zeroconf.get_service_info(service_type, name)
+                if info:
+                    for i, service in enumerate(self.services):
+                        if service['type'] == service_type and service['name'] == name:
+                            self.services[i]['info'] = info
+                            logger.debug("Updated mDNS service", service_type=service_type, name=name)
+                            break
         
         # Create service browser
         listener = MDNSServiceListener()
