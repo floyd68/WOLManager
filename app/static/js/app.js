@@ -154,23 +154,87 @@ class WOLManagerApp {
     }
     
     renderHostsTable() {
-        const tbody = document.getElementById('hosts-table-body');
-        tbody.innerHTML = '';
+        // Clear both tables
+        const registeredTbody = document.getElementById('registered-hosts-table-body');
+        const unregisteredTbody = document.getElementById('unregistered-hosts-table-body');
+        const registeredEmpty = document.getElementById('registered-hosts-empty');
+        const unregisteredEmpty = document.getElementById('unregistered-hosts-empty');
         
-        this.hosts.forEach(host => {
-            const row = this.createHostRow(host);
-            tbody.appendChild(row);
-        });
+        registeredTbody.innerHTML = '';
+        unregisteredTbody.innerHTML = '';
+        
+        // Separate hosts by WOL status
+        const registeredHosts = this.hosts.filter(host => host.wol_enabled);
+        const unregisteredHosts = this.hosts.filter(host => !host.wol_enabled);
+        
+        // Update registered hosts table
+        if (registeredHosts.length > 0) {
+            registeredEmpty.classList.add('hidden');
+            registeredHosts.forEach(host => {
+                const row = this.createRegisteredHostRow(host);
+                registeredTbody.appendChild(row);
+            });
+        } else {
+            registeredEmpty.classList.remove('hidden');
+        }
+        
+        // Update unregistered hosts table
+        if (unregisteredHosts.length > 0) {
+            unregisteredEmpty.classList.add('hidden');
+            unregisteredHosts.forEach(host => {
+                const row = this.createUnregisteredHostRow(host);
+                unregisteredTbody.appendChild(row);
+            });
+        } else {
+            unregisteredEmpty.classList.remove('hidden');
+        }
+        
+        // Update counters
+        document.getElementById('registered-count').textContent = registeredHosts.length;
+        document.getElementById('wol-enabled').textContent = registeredHosts.length;
     }
     
-    createHostRow(host) {
+    createRegisteredHostRow(host) {
+        const row = document.createElement('tr');
+        row.className = 'hover:bg-green-50';
+        
+        const statusBadge = this.getStatusBadge(host.status);
+        const wolBadge = '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Enabled</span>';
+        
+        row.innerHTML = `
+            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${host.ip_address}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${host.hostname || 'Unknown'}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${host.mac_address || 'Unknown'}</td>
+            <td class="px-6 py-4 whitespace-nowrap">${statusBadge}</td>
+            <td class="px-6 py-4 whitespace-nowrap">${wolBadge}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                <div class="flex space-x-2">
+                    ${host.mac_address ? 
+                        `<button onclick="app.wakeHost('${host.ip_address}')" class="text-blue-600 hover:text-blue-900" title="Wake Host">
+                            <i class="fas fa-power-off"></i>
+                        </button>` : ''
+                    }
+                    <button onclick="app.toggleWOLRegistration('${host.ip_address}', true)" 
+                            class="text-red-600 hover:text-red-900" 
+                            title="Unregister from WOL">
+                        <i class="fas fa-toggle-off"></i>
+                    </button>
+                    <button onclick="app.editHost('${host.ip_address}')" class="text-indigo-600 hover:text-indigo-900" title="Edit Host">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                </div>
+            </td>
+        `;
+        
+        return row;
+    }
+    
+    createUnregisteredHostRow(host) {
         const row = document.createElement('tr');
         row.className = 'hover:bg-gray-50';
         
         const statusBadge = this.getStatusBadge(host.status);
-        const wolBadge = host.wol_enabled ? 
-            '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Enabled</span>' :
-            '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">Disabled</span>';
+        const wolBadge = '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">Disabled</span>';
         
         // Format vendor information
         const vendor = host.vendor || 'Unknown';
@@ -210,31 +274,26 @@ class WOLManagerApp {
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${osDeviceInfo}</td>
             <td class="px-6 py-4 whitespace-nowrap">${statusBadge}</td>
             <td class="px-6 py-4 whitespace-nowrap">${wolBadge}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div class="flex space-x-2">
-                        ${host.wol_enabled && host.mac_address ? 
-                            `<button onclick="app.wakeHost('${host.ip_address}')" class="text-blue-600 hover:text-blue-900" title="Wake Host">
-                                <i class="fas fa-power-off"></i>
-                            </button>` : ''
-                        }
-                        ${host.mac_address ? 
-                            `<button onclick="app.toggleWOLRegistration('${host.ip_address}', ${host.wol_enabled})" 
-                                    class="${host.wol_enabled ? 'text-green-600 hover:text-green-900' : 'text-gray-600 hover:text-gray-900'}" 
-                                    title="${host.wol_enabled ? 'Unregister from WOL' : 'Register for WOL'}">
-                                <i class="fas ${host.wol_enabled ? 'fa-toggle-on' : 'fa-toggle-off'}"></i>
-                            </button>` : 
-                            `<button class="text-gray-400 cursor-not-allowed" title="No MAC address available" disabled>
-                                <i class="fas fa-toggle-off"></i>
-                            </button>`
-                        }
-                        <button onclick="app.editHost('${host.ip_address}')" class="text-indigo-600 hover:text-indigo-900" title="Edit Host">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button onclick="app.deleteHost('${host.ip_address}')" class="text-red-600 hover:text-red-900" title="Delete Host">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
-                </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                <div class="flex space-x-2">
+                    ${host.mac_address ? 
+                        `<button onclick="app.toggleWOLRegistration('${host.ip_address}', false)" 
+                                class="text-green-600 hover:text-green-900" 
+                                title="Register for WOL">
+                            <i class="fas fa-toggle-on"></i>
+                        </button>` : 
+                        `<button class="text-gray-400 cursor-not-allowed" title="No MAC address available" disabled>
+                            <i class="fas fa-toggle-off"></i>
+                        </button>`
+                    }
+                    <button onclick="app.editHost('${host.ip_address}')" class="text-indigo-600 hover:text-indigo-900" title="Edit Host">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button onclick="app.deleteHost('${host.ip_address}')" class="text-red-600 hover:text-red-900" title="Delete Host">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </td>
         `;
         
         return row;
@@ -561,19 +620,56 @@ class WOLManagerApp {
     }
     
     filterHosts(searchTerm) {
+        if (!searchTerm) {
+            // If no search term, show all hosts
+            this.renderHostsTable();
+            return;
+        }
+        
         const filteredHosts = this.hosts.filter(host => 
             host.ip_address.toLowerCase().includes(searchTerm.toLowerCase()) ||
             (host.hostname && host.hostname.toLowerCase().includes(searchTerm.toLowerCase())) ||
             (host.mac_address && host.mac_address.toLowerCase().includes(searchTerm.toLowerCase()))
         );
         
-        const tbody = document.getElementById('hosts-table-body');
-        tbody.innerHTML = '';
+        // Clear both tables
+        const registeredTbody = document.getElementById('registered-hosts-table-body');
+        const unregisteredTbody = document.getElementById('unregistered-hosts-table-body');
+        const registeredEmpty = document.getElementById('registered-hosts-empty');
+        const unregisteredEmpty = document.getElementById('unregistered-hosts-empty');
         
-        filteredHosts.forEach(host => {
-            const row = this.createHostRow(host);
-            tbody.appendChild(row);
-        });
+        registeredTbody.innerHTML = '';
+        unregisteredTbody.innerHTML = '';
+        
+        // Separate filtered hosts by WOL status
+        const registeredHosts = filteredHosts.filter(host => host.wol_enabled);
+        const unregisteredHosts = filteredHosts.filter(host => !host.wol_enabled);
+        
+        // Update registered hosts table
+        if (registeredHosts.length > 0) {
+            registeredEmpty.classList.add('hidden');
+            registeredHosts.forEach(host => {
+                const row = this.createRegisteredHostRow(host);
+                registeredTbody.appendChild(row);
+            });
+        } else {
+            registeredEmpty.classList.remove('hidden');
+        }
+        
+        // Update unregistered hosts table
+        if (unregisteredHosts.length > 0) {
+            unregisteredEmpty.classList.add('hidden');
+            unregisteredHosts.forEach(host => {
+                const row = this.createUnregisteredHostRow(host);
+                unregisteredTbody.appendChild(row);
+            });
+        } else {
+            unregisteredEmpty.classList.remove('hidden');
+        }
+        
+        // Update counters
+        document.getElementById('registered-count').textContent = registeredHosts.length;
+        document.getElementById('wol-enabled').textContent = registeredHosts.length;
     }
     
     changeTheme(theme) {

@@ -104,10 +104,48 @@
                 </div>
             </div>
 
-            <!-- Hosts Table -->
+            <!-- Registered Hosts (WOL Enabled) -->
+            <div class="card rounded-lg p-6 mb-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold text-gray-900">
+                        <i class="fas fa-power-off text-green-600 mr-2"></i>Registered Hosts (WOL Enabled)
+                    </h3>
+                    <div class="text-sm text-gray-500">
+                        <span id="registered-count">0</span> hosts registered
+                    </div>
+                </div>
+                
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-green-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">IP Address</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hostname</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">MAC Address</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">WOL</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="registered-hosts-table-body" class="bg-white divide-y divide-gray-200">
+                            <!-- Registered hosts will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div id="registered-hosts-empty" class="text-center py-8 text-gray-500 hidden">
+                    <i class="fas fa-power-off text-4xl mb-4 text-gray-300"></i>
+                    <p class="text-lg font-medium">No hosts registered for Wake-on-LAN</p>
+                    <p class="text-sm mt-2">Use the toggle buttons below to register hosts for WOL broadcasts</p>
+                </div>
+            </div>
+
+            <!-- Unregistered Hosts (WOL Disabled) -->
             <div class="card rounded-lg p-6 mb-8">
                 <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-lg font-semibold text-gray-900">Network Hosts</h3>
+                    <h3 class="text-lg font-semibold text-gray-900">
+                        <i class="fas fa-network-wired text-gray-600 mr-2"></i>Unregistered Hosts
+                    </h3>
                     <div class="flex space-x-2">
                         <input type="text" id="search-hosts" placeholder="Search hosts..." 
                                class="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -131,10 +169,16 @@
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                             </tr>
                         </thead>
-                        <tbody id="hosts-table-body" class="bg-white divide-y divide-gray-200">
-                            <!-- Hosts will be populated here -->
+                        <tbody id="unregistered-hosts-table-body" class="bg-white divide-y divide-gray-200">
+                            <!-- Unregistered hosts will be populated here -->
                         </tbody>
                     </table>
+                </div>
+                
+                <div id="unregistered-hosts-empty" class="text-center py-8 text-gray-500 hidden">
+                    <i class="fas fa-network-wired text-4xl mb-4 text-gray-300"></i>
+                    <p class="text-lg font-medium">No unregistered hosts found</p>
+                    <p class="text-sm mt-2">All discovered hosts are registered for Wake-on-LAN, or no hosts have been discovered yet</p>
                 </div>
             </div>
 
