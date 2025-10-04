@@ -54,7 +54,7 @@
         <!-- Main Content -->
         <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <!-- Dashboard Stats -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
                 <div class="card rounded-lg p-6">
                     <div class="flex items-center">
                         <div class="p-2 bg-blue-100 rounded-lg">
@@ -100,6 +100,24 @@
                             <p class="text-sm font-medium text-gray-600">Last Scan</p>
                             <p id="last-scan" class="text-sm font-semibold text-gray-900">Never</p>
                         </div>
+                    </div>
+                </div>
+                
+                <!-- Discovery Status & Control -->
+                <div class="card rounded-lg p-6">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <div class="p-2 bg-indigo-100 rounded-lg">
+                                <i id="discovery-status-icon" class="fas fa-circle text-red-600"></i>
+                            </div>
+                            <div class="ml-4">
+                                <p class="text-sm font-medium text-gray-600">Discovery</p>
+                                <p id="discovery-status" class="text-sm font-semibold text-gray-900">Stopped</p>
+                            </div>
+                        </div>
+                        <button id="discovery-toggle" class="bg-green-600 text-white px-3 py-2 rounded-md hover:bg-green-700 transition-colors text-sm" title="Start Discovery">
+                            <i class="fas fa-play"></i>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -163,13 +181,13 @@
                         <thead class="bg-gray-50">
                             <tr>
                                 <th class="w-30 px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">IP Address</th>
-                                <th class="w-38 px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hostname</th>
+                                <th class="w-36 px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hostname</th>
                                 <th class="w-34 px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">MAC Address</th>
-                                <th class="w-30 px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">Vendor</th>
-                                <th class="w-36 px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">OS/Device</th>
+                                <th class="w-26 px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">Vendor</th>
+                                <th class="w-32 px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">OS/Device</th>
                                 <th class="w-24 px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                                 <th class="w-20 px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">WOL</th>
-                                <th class="w-32 px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                <th class="w-30 px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                             </tr>
                         </thead>
                         <tbody id="unregistered-hosts-table-body" class="bg-white divide-y divide-gray-200">
@@ -202,41 +220,22 @@
                 </div>
             </div>
 
-            <!-- Controls -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                <!-- Discovery Controls -->
-                <div class="card rounded-lg p-6">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Discovery Controls</h3>
-                    <div class="space-y-3">
-                        <button id="start-discovery" class="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors">
-                            <i class="fas fa-play mr-2"></i>Start Discovery
-                        </button>
-                        <button id="stop-discovery" class="w-full bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors">
-                            <i class="fas fa-stop mr-2"></i>Stop Discovery
-                        </button>
-                        <button id="force-scan" class="w-full bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors">
-                            <i class="fas fa-sync mr-2"></i>Force Scan Now
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Quick Actions -->
-                <div class="card rounded-lg p-6">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
-                    <div class="space-y-3">
-                        <button id="refresh-hosts" class="w-full bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 transition-colors">
-                            <i class="fas fa-refresh mr-2"></i>Refresh Hosts
-                        </button>
-                        <button id="view-wol-hosts" class="w-full bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors">
-                            <i class="fas fa-power-off mr-2"></i>View WOL Hosts
-                        </button>
-                        <button id="export-hosts" class="w-full bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 transition-colors">
-                            <i class="fas fa-download mr-2"></i>Export Hosts
-                        </button>
-                        <button id="view-logs" class="w-full bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition-colors">
-                            <i class="fas fa-list mr-2"></i>View Logs
-                        </button>
-                    </div>
+            <!-- Quick Actions -->
+            <div class="card rounded-lg p-6 mb-8">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <button id="force-scan" class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors">
+                        <i class="fas fa-sync mr-2"></i>Force Scan
+                    </button>
+                    <button id="refresh-hosts" class="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 transition-colors">
+                        <i class="fas fa-refresh mr-2"></i>Refresh Hosts
+                    </button>
+                    <button id="view-wol-hosts" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors">
+                        <i class="fas fa-power-off mr-2"></i>View WOL Hosts
+                    </button>
+                    <button id="export-hosts" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 transition-colors">
+                        <i class="fas fa-download mr-2"></i>Export Hosts
+                    </button>
                 </div>
             </div>
         </main>

@@ -126,5 +126,5 @@ if __name__ == "__main__":
         host=settings.HOST,
         port=settings.PORT,
         reload=settings.DEBUG,
-        log_config=None
+        access_log=False
     )

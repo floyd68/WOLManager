@@ -25,13 +25,9 @@ class WOLManagerApp {
             this.changeTheme(e.target.value);
         });
         
-        // Discovery controls
-        document.getElementById('start-discovery').addEventListener('click', () => {
-            this.startDiscovery();
-        });
-        
-        document.getElementById('stop-discovery').addEventListener('click', () => {
-            this.stopDiscovery();
+        // Discovery toggle
+        document.getElementById('discovery-toggle').addEventListener('click', () => {
+            this.toggleDiscovery();
         });
         
         document.getElementById('force-scan').addEventListener('click', () => {
@@ -352,19 +348,47 @@ class WOLManagerApp {
         const lastScan = status.last_run ? new Date(status.last_run).toLocaleString() : 'Never';
         document.getElementById('last-scan').textContent = lastScan;
         
-        const indicator = document.getElementById('status-indicator');
-        const dot = indicator.querySelector('.w-2');
-        const text = indicator.querySelector('span');
+        // Update the new discovery status display in dashboard
+        const statusElement = document.getElementById('discovery-status');
+        const statusIcon = document.getElementById('discovery-status-icon');
+        const toggleButton = document.getElementById('discovery-toggle');
         
         if (status.status === 'running') {
-            dot.className = 'w-2 h-2 bg-green-500 rounded-full mr-2';
-            text.textContent = 'Running';
+            statusElement.textContent = 'Running';
+            statusIcon.className = 'fas fa-circle text-green-600';
+            toggleButton.className = 'bg-red-600 text-white px-3 py-2 rounded-md hover:bg-red-700 transition-colors text-sm';
+            toggleButton.innerHTML = '<i class="fas fa-stop"></i>';
+            toggleButton.title = 'Stop Discovery';
         } else if (status.status === 'error') {
-            dot.className = 'w-2 h-2 bg-red-500 rounded-full mr-2';
-            text.textContent = 'Error';
+            statusElement.textContent = 'Error';
+            statusIcon.className = 'fas fa-circle text-red-600';
+            toggleButton.className = 'bg-green-600 text-white px-3 py-2 rounded-md hover:bg-green-700 transition-colors text-sm';
+            toggleButton.innerHTML = '<i class="fas fa-play"></i>';
+            toggleButton.title = 'Start Discovery';
         } else {
-            dot.className = 'w-2 h-2 bg-yellow-500 rounded-full mr-2';
-            text.textContent = 'Stopped';
+            statusElement.textContent = 'Stopped';
+            statusIcon.className = 'fas fa-circle text-red-600';
+            toggleButton.className = 'bg-green-600 text-white px-3 py-2 rounded-md hover:bg-green-700 transition-colors text-sm';
+            toggleButton.innerHTML = '<i class="fas fa-play"></i>';
+            toggleButton.title = 'Start Discovery';
+        }
+        
+        // Keep the old status indicator for compatibility (if it exists)
+        const indicator = document.getElementById('status-indicator');
+        if (indicator) {
+            const dot = indicator.querySelector('.w-2');
+            const text = indicator.querySelector('span');
+            
+            if (status.status === 'running') {
+                dot.className = 'w-2 h-2 bg-green-500 rounded-full mr-2';
+                text.textContent = 'Running';
+            } else if (status.status === 'error') {
+                dot.className = 'w-2 h-2 bg-red-500 rounded-full mr-2';
+                text.textContent = 'Error';
+            } else {
+                dot.className = 'w-2 h-2 bg-yellow-500 rounded-full mr-2';
+                text.textContent = 'Stopped';
+            }
         }
     }
     
@@ -496,29 +520,28 @@ class WOLManagerApp {
         });
     }
     
-    async startDiscovery() {
+    async toggleDiscovery() {
         try {
-            const response = await fetch(`${this.apiBase}/discovery/start`, { method: 'POST' });
-            if (!response.ok) throw new Error('Failed to start discovery');
+            const statusElement = document.getElementById('discovery-status');
+            const statusText = statusElement.textContent;
             
-            this.showNotification('Discovery started', 'success');
+            let response;
+            if (statusText === 'Stopped' || statusText === 'Unknown') {
+                // Start discovery
+                response = await fetch(`${this.apiBase}/discovery/start`, { method: 'POST' });
+                if (!response.ok) throw new Error('Failed to start discovery');
+                this.showNotification('Discovery started', 'success');
+            } else {
+                // Stop discovery
+                response = await fetch(`${this.apiBase}/discovery/stop`, { method: 'POST' });
+                if (!response.ok) throw new Error('Failed to stop discovery');
+                this.showNotification('Discovery stopped', 'success');
+            }
+            
             this.loadDiscoveryStatus();
         } catch (error) {
-            console.error('Failed to start discovery:', error);
-            this.showNotification('Failed to start discovery', 'error');
-        }
-    }
-    
-    async stopDiscovery() {
-        try {
-            const response = await fetch(`${this.apiBase}/discovery/stop`, { method: 'POST' });
-            if (!response.ok) throw new Error('Failed to stop discovery');
-            
-            this.showNotification('Discovery stopped', 'success');
-            this.loadDiscoveryStatus();
-        } catch (error) {
-            console.error('Failed to stop discovery:', error);
-            this.showNotification('Failed to stop discovery', 'error');
+            console.error('Failed to toggle discovery:', error);
+            this.showNotification('Failed to toggle discovery', 'error');
         }
     }
     
