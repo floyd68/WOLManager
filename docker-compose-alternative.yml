@@ -21,7 +21,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - REDIS_URL=redis://localhost:6379/0
+      - REDIS_URL=redis://redis:6379/0
       - NETWORK_RANGE=192.168.1.0/24
       - DISCOVERY_INTERVAL=300
       - DISCOVERY_EARLY_TERMINATION=true
@@ -39,9 +39,8 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-    network_mode: host
+    # Note: This version uses Docker's default networking instead of host mode
+    # This may require additional configuration for network discovery to work properly
 
 volumes:
   redis_data:
-
-
