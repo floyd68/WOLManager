@@ -24,6 +24,8 @@ services:
       - REDIS_URL=redis://redis:6379/0
       - NETWORK_RANGE=192.168.1.0/24
       - DISCOVERY_INTERVAL=300
+      - DISCOVERY_EARLY_TERMINATION=true
+      - DISCOVERY_MIN_HOSTS_THRESHOLD=5
       - WOL_BROADCAST_ADDRESS=192.168.1.255
       - DEBUG=false
     volumes:
