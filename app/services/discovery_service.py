@@ -100,6 +100,10 @@ class DiscoveryService:
             return discovered_hosts
         
         # Try each discovery method in priority order
+        # Stop early if high-priority methods find sufficient hosts (if enabled)
+        high_priority_threshold = settings.DISCOVERY_MIN_HOSTS_THRESHOLD
+        high_priority_hosts = 0
+        
         for method in self.discovery_methods:
             try:
                 logger.info("Running discovery method", method=method.__class__.__name__)
@@ -108,9 +112,23 @@ class DiscoveryService:
                 for host in hosts:
                     discovered_hosts.append(host)
                 
+                # Check if this is a high-priority method (RouterOS API or REST)
+                if method.__class__.__name__ in ['RouterOSAPIDiscovery', 'RouterOSRestDiscovery']:
+                    high_priority_hosts += len(hosts)
+                
                 logger.info("Discovery method completed", 
                            method=method.__class__.__name__, 
                            hosts_found=len(hosts))
+                
+                # Early termination: if we have enough high-priority hosts and total hosts
+                if (settings.DISCOVERY_EARLY_TERMINATION and
+                    high_priority_hosts >= high_priority_threshold and 
+                    len(discovered_hosts) >= high_priority_threshold):
+                    logger.info("Early termination: sufficient high-priority hosts found",
+                               high_priority_hosts=high_priority_hosts,
+                               total_hosts=len(discovered_hosts),
+                               threshold=high_priority_threshold)
+                    break
                 
             except Exception as e:
                 logger.error("Discovery method failed", 

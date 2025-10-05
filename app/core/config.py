@@ -22,6 +22,8 @@ class Settings(BaseSettings):
     # Discovery settings
     DISCOVERY_INTERVAL: int = 300  # seconds
     NETWORK_RANGE: str = "192.168.1.0/24"
+    DISCOVERY_EARLY_TERMINATION: bool = True  # Stop discovery when high-priority methods succeed
+    DISCOVERY_MIN_HOSTS_THRESHOLD: int = 5  # Minimum hosts to trigger early termination
     
     # RouterOS settings
     ROUTEROS_HOST: Optional[str] = None
