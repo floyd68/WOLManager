@@ -2,6 +2,7 @@
 WOLManager - A Modern Network Host Discovery and WOL Broadcast Service
 """
 
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -35,41 +36,15 @@ structlog.configure(
 
 logger = structlog.get_logger(__name__)
 
-# Create FastAPI application
-app = FastAPI(
-    title="WOLManager",
-    description="A Modern Network Host Discovery and WOL Broadcast Service",
-    version="1.0.0",
-    docs_url="/api/docs",
-    redoc_url="/api/redoc",
-)
-
-# Add CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# Mount static files
-app.mount("/static", StaticFiles(directory="app/static"), name="static")
-
-# Templates
-templates = Jinja2Templates(directory="app/templates")
-
-# Include API router
-app.include_router(api_router, prefix="/api/v1")
-
 # Initialize services
 discovery_service = DiscoveryService()
 wol_service = WOLService()
 
 
-@app.on_event("startup")
-async def startup_event():
-    """Initialize services on startup"""
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Manage application lifespan events"""
+    # Startup
     logger.info("Starting WOLManager application")
     
     # Test Redis connection
@@ -90,14 +65,42 @@ async def startup_event():
         logger.error("Failed to start discovery service", error=str(e))
         logger.warning("Continuing without discovery service")
 
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    """Cleanup on shutdown"""
+    yield
+    
+    # Shutdown
     logger.info("Shutting down WOLManager application")
     await discovery_service.stop()
     await redis_client.close()
     logger.info("Application shutdown complete")
+
+
+# Create FastAPI application
+app = FastAPI(
+    title="WOLManager",
+    description="A Modern Network Host Discovery and WOL Broadcast Service",
+    version="1.0.0",
+    docs_url="/api/docs",
+    redoc_url="/api/redoc",
+    lifespan=lifespan,
+)
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Mount static files
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
+
+# Templates
+templates = Jinja2Templates(directory="app/templates")
+
+# Include API router
+app.include_router(api_router, prefix="/api/v1")
 
 
 @app.get("/")
