@@ -1,0 +1,79 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: wolmanager-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  wolmanager:
+    build: .
+    container_name: wolmanager-app
+    expose:
+      - "8000"
+    environment:
+      - REDIS_URL=redis://localhost:6379/0
+      - NETWORK_RANGE=192.168.1.0/24
+      - DISCOVERY_INTERVAL=300
+      - DISCOVERY_EARLY_TERMINATION=true
+      - DISCOVERY_MIN_HOSTS_THRESHOLD=5
+      - WOL_BROADCAST_ADDRESS=192.168.1.255
+      - DEBUG=false
+    volumes:
+      - ./env.example:/app/.env:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    network_mode: host
+
+  nginx:
+    image: nginx:alpine
+    container_name: wolmanager-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/sites-available/wolmanager
+      - ./nginx-ssl.conf:/etc/nginx/sites-available/wolmanager-ssl
+      - /etc/letsencrypt:/etc/letsencrypt:ro  # Mount SSL certificates
+      - nginx_logs:/var/log/nginx
+    depends_on:
+      - wolmanager
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    # Use host networking to access the application
+    network_mode: host
+    command: >
+      sh -c "
+        # Create sites-enabled directory if it doesn't exist
+        mkdir -p /etc/nginx/sites-enabled
+        # Enable the HTTP site (for SSL, enable the SSL site instead)
+        ln -sf /etc/nginx/sites-available/wolmanager /etc/nginx/sites-enabled/default
+        # Test nginx configuration
+        nginx -t
+        # Start nginx
+        nginx -g 'daemon off;'
+      "
+
+volumes:
+  redis_data:
+  nginx_logs:
